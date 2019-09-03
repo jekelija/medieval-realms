@@ -1,0 +1,10 @@
+.card {
+    border: 1px solid black;
+    width: 100px;
+    height: 180px;
+    border-radius: 5px;
+}
+
+.card.flipped {
+    background: black;
+}
