@@ -1,33 +1,80 @@
 import React from 'react';
-import { Deck } from './Deck';
+import './Common.css';
+import './Game.css';
+
 import { CardData } from './CardData';
+import { Player } from './Player';
+import { shuffle } from './Utilities';
+import { Card } from './Card';
 
 
 export interface GameProps { }
-export interface GameState { }
+export interface GameState { player1Health:number, player2Health:number }
 export class Game extends React.Component<GameProps, GameState> {
 
-  //TODO dynamic number of players and cards
-  player1Cards:CardData[] = [];
-  player2Cards:CardData[] = [];
+  playerCards:CardData[];
+  deck:CardData[];
+  tradeRow:CardData[];
 
+  //TODO dynamic number of players
   constructor(props:GameProps) {
     super(props);
-    //TODO get real cards
-    for(let i = 0; i < 52; ++i) {
-      this.player1Cards.push(new CardData());
-      this.player2Cards.push(new CardData());
+
+    this.state = {
+      player1Health : 50,
+      player2Health : 50
+    };
+
+    //TODO use real cards
+    this.playerCards = [];
+    this.deck = [];
+    this.tradeRow = [];
+    for(let i = 0; i < 10; ++i) {
+      this.playerCards.push(new CardData());
+    }
+    for(let i = 0; i < 100; ++i) {
+      this.deck.push(new CardData());
+    }
+    shuffle(this.deck);
+    for(let i = 0; i < 5; ++i) {
+      this.tradeRow.push(this.deck.shift() as CardData);
     }
   }
 
-    render() {
-      return (
-        <div className="game">
-          <div className="game-board">
-            <Deck cardDatas={this.player1Cards}/>
+  beginGame() {
+
+  }
+
+  render() {
+    const tradeRowCards = [];
+
+    for(let t of this.tradeRow) {
+      tradeRowCards.push(<Card flipped={true} cardData={t}/>);
+    }
+
+    return (
+      <div className="game">
+        <div className="game-board">
+          <div className="otherPlayerArea">
+            <Player localPlayer={false} cardDatas={this.playerCards} />
+          </div>
+          <div className="tradeRow">
+            <div className="tradeRowDraw">
+              <Card flipped={true} cardData={undefined}/>
+            </div>
+            <div className="tradeRowFlipped cardGroup">
+              {tradeRowCards}
+            </div>
+          </div>
+          <div className="playingArea">
+
+          </div>
+          <div className="myPlayerArea">
+            <Player localPlayer={true} cardDatas={this.playerCards} />
           </div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 }
   
