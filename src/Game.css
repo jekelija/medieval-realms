@@ -7,9 +7,6 @@
     justify-content: space-between;
 }
 
-.tradeRowFlipped {
-    flex: 1;
-}
 
 .tradeRow {
     display: flex;

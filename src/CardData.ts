@@ -15,10 +15,11 @@ export enum Ability {
     //TODO MORE
 }
 
-
+let cardNumber = 0;
 
 export class CardData {
 
+    id:number;
     attack: number;
     trade: number;
     health: number;
@@ -37,6 +38,7 @@ export class CardData {
     abilitiesScrap: Ability[] = [];
 
     constructor() {
+        this.id = ++cardNumber;
         this.attack = Math.floor(Math.random()*6);
         this.trade = Math.floor(Math.random()*4);
         this.health = Math.floor(Math.random()*6);

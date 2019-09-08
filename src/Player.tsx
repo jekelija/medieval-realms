@@ -77,10 +77,10 @@ export class Player extends React.Component <PlayerProps, PlayerState> {
         const discardCards = [];
 
         for(let h of this.state.hand) {
-            handCards.push(<Card flipped={flipped} cardData={h}/>);
+            handCards.push(<Card key={h.id} flipped={flipped} cardData={h}/>);
         }
         for(let h of this.state.discard) {
-            discardCards.push(<Card flipped={true} cardData={h}/>);
+            discardCards.push(<Card key={h.id} flipped={true} cardData={h}/>);
         }
 
         const endTurnButton = this.props.localPlayer ? <button onClick={this.handleEndTurn}>End Turn</button> : null; 

@@ -39,17 +39,25 @@ export class Game extends React.Component<GameProps, GameState> {
     for(let i = 0; i < 5; ++i) {
       this.tradeRow.push(this.deck.shift() as CardData);
     }
+
+    const socket = new WebSocket('ws://127.0.0.1:3012');
+    // Connection opened
+    socket.addEventListener('open', function (event) {
+      socket.send('Hello Server!');
+    });
+
+    // Listen for messages
+    socket.addEventListener('message', function (event) {
+      console.log('Message from server ', event.data);
+    });
   }
 
-  beginGame() {
-
-  }
 
   render() {
     const tradeRowCards = [];
 
     for(let t of this.tradeRow) {
-      tradeRowCards.push(<Card flipped={true} cardData={t}/>);
+      tradeRowCards.push(<Card flipped={true} cardData={t} key={t.id}/>);
     }
 
     return (

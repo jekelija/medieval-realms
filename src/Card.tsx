@@ -22,7 +22,7 @@ export class Card extends React.Component<CardProps, CardState> {
       const abilities = []
 
       for (let a of cardAbilities) {
-        abilities.push(<p>{AbilityMessagesEnglish[a]}</p>)
+        abilities.push(<p key={a}>{AbilityMessagesEnglish[a]}</p>)
       }
       if(abilities.length > 0) {
           abilitiesDiv = <div>{abilities}</div>
