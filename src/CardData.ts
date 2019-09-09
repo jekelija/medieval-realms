@@ -1,3 +1,5 @@
+import { createUUID } from "./Utilities";
+
 export enum Faction {
     Orcs = 0,
     Knights = 1,
@@ -15,11 +17,9 @@ export enum Ability {
     //TODO MORE
 }
 
-let cardNumber = 0;
-
 export class CardData {
 
-    id:number;
+    id:string;
     attack: number;
     trade: number;
     health: number;
@@ -38,7 +38,7 @@ export class CardData {
     abilitiesScrap: Ability[] = [];
 
     constructor() {
-        this.id = ++cardNumber;
+        this.id = createUUID();
         this.attack = Math.floor(Math.random()*6);
         this.trade = Math.floor(Math.random()*4);
         this.health = Math.floor(Math.random()*6);

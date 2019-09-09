@@ -4,25 +4,28 @@ import './Game.css';
 
 import { CardData } from './CardData';
 import { Player } from './Player';
-import { shuffle } from './Utilities';
+import { shuffle, createUUID } from './Utilities';
 import { Card } from './Card';
+import {ConnectionDialog} from './ConnectionDialog';
+import { PlayerData } from './PlayerData';
 
 
 export interface GameProps { }
-export interface GameState { player1Health:number, player2Health:number }
+export interface GameState { localPlayer:PlayerData, onlinePlayer1?:PlayerData }
 export class Game extends React.Component<GameProps, GameState> {
 
   playerCards:CardData[];
   deck:CardData[];
   tradeRow:CardData[];
+  socket: WebSocket;
 
   //TODO dynamic number of players
   constructor(props:GameProps) {
     super(props);
 
     this.state = {
-      player1Health : 50,
-      player2Health : 50
+      localPlayer : new PlayerData(createUUID(), true),
+      onlinePlayer1 : undefined
     };
 
     //TODO use real cards
@@ -40,18 +43,33 @@ export class Game extends React.Component<GameProps, GameState> {
       this.tradeRow.push(this.deck.shift() as CardData);
     }
 
-    const socket = new WebSocket('ws://127.0.0.1:3012');
-    // Connection opened
-    socket.addEventListener('open', function (event) {
-      socket.send('Hello Server!');
-    });
+    this.socket = new WebSocket('ws://127.0.0.1:3012');
 
     // Listen for messages
-    socket.addEventListener('message', function (event) {
+    this.socket.addEventListener('message', (event)=> {
       console.log('Message from server ', event.data);
     });
+
+    this.handleStartGame = this.handleStartGame.bind(this);
+    this.handleJoinGame = this.handleJoinGame.bind(this);
   }
 
+  handleJoinGame(id: string) {
+    const joinGameData = {
+      type:"GameJoin",
+      playerUUID: this.state.localPlayer.uuid,
+      gameUUID:id
+    };
+    this.socket.send(JSON.stringify(joinGameData));
+  }
+
+  handleStartGame() {
+    const startGameData = {
+      type:"GameStart",
+      playerUUID: this.state.localPlayer.uuid
+    };
+    this.socket.send(JSON.stringify(startGameData));
+  }
 
   render() {
     const tradeRowCards = [];
@@ -81,7 +99,8 @@ export class Game extends React.Component<GameProps, GameState> {
             <Player localPlayer={true} cardDatas={this.playerCards} />
           </div>
         </div>
-      </div>
+        <ConnectionDialog onJoinGameClick={this.handleStartGame} onStartGameClick={this.handleStartGame} socketConnect={this.socket}/>
+     </div>
     );
   }
 }

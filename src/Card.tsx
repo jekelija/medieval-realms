@@ -8,8 +8,6 @@ export interface CardState { flipped:boolean}
 
 export class Card extends React.Component<CardProps, CardState> {
   
-    state: CardState;
-
     constructor(props: CardProps) {
       super(props);
       this.state = {
