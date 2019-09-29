@@ -18,6 +18,32 @@ export function shuffle(array: CardData[]): void {
     }
 } 
 
+export async function postData(url:string, data:any = {}, authToken?:string): Promise<{headers:Headers,data:any}> {
+    const headers:any = {
+        'Content-Type': 'application/json',
+    };
+    if(authToken) {
+        headers['EXAUTH'] = authToken;
+    }
+    // Default options are marked with *
+    const response = await fetch(url, {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors', // no-cors, *cors, same-origin
+            cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: 'same-origin', // include, *same-origin, omit
+            headers: headers,
+            redirect: 'follow', // manual, *follow, error
+            referrer: 'no-referrer', // no-referrer, *client
+            body: JSON.stringify(data), // body data type must match "Content-Type" header
+        });
+    const txt = await response.text();
+    const returnData = txt ? JSON.parse(txt) : {};
+    return {
+        headers: response.headers,
+        data: returnData
+    };
+}
+
 export function createUUID() {
     // http://www.ietf.org/rfc/rfc4122.txt
     let s = [];

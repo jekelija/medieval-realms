@@ -1,8 +1,9 @@
 import React, { ChangeEvent } from 'react';
 import './ConnectionDialog.css';
+import { postData } from './Utilities';
 
-export interface ConnectionDialogProps { onStartGameClick:()=>void, onJoinGameClick:(id:string)=>void }
-export interface ConnectionDialogState { gameIdInput:string, friendReady:boolean, gameStarted:string}
+export interface ConnectionDialogProps { authToken:string, baseUrl:string, onStartGameClick:()=>void, onJoinGameClick:(id:string)=>void }
+export interface ConnectionDialogState { connectError:string, gameIdInput:string, friendReady:boolean, gameStarted:string}
 
 export class ConnectionDialog extends React.Component<ConnectionDialogProps, ConnectionDialogState> {
   
@@ -14,10 +15,11 @@ export class ConnectionDialog extends React.Component<ConnectionDialogProps, Con
         gameStarted: "",
         gameIdInput: "",
         friendReady: false,
-
+        connectError: ""
       };
 
       this.handleJoin = this.handleJoin.bind(this);
+      this.handleStart = this.handleStart.bind(this);
       this.handleChange = this.handleChange.bind(this);
     }
 
@@ -25,8 +27,30 @@ export class ConnectionDialog extends React.Component<ConnectionDialogProps, Con
       this.setState({ gameIdInput: (e.target as HTMLInputElement).value });
     }
 
-    handleJoin(e:MouseEvent) {
-      this.props.onJoinGameClick(this.state.gameIdInput);
+    async handleJoin():Promise<void> {
+      try {
+        const gameData = await postData(this.props.baseUrl + 'game/join', {
+            game_id: parseInt(this.state.gameIdInput),
+            initial_state: {}
+        }, this.props.authToken);
+        
+      }
+      catch(e) {
+          this.setState({connectError: 'Error ' + e });
+      }
+    }
+
+    async handleStart():Promise<void> {
+      try {
+        const gameData = await postData(this.props.baseUrl + 'game/create', {
+            initial_state: {},
+            shared_state: {}
+        }, this.props.authToken);
+        this.setState({gameStarted:gameData.data.game_id});
+      }
+      catch(e) {
+          this.setState({connectError: 'Error' + e });
+      }
     }
 
     render() {
@@ -36,7 +60,8 @@ export class ConnectionDialog extends React.Component<ConnectionDialogProps, Con
               <div className='dialog'>
                 <div>
                   <div>
-                  <button onClick={this.props.onStartGameClick}>Start Game</button><span className="gameIDSpan">{"Game ID: " + this.state.gameStarted}</span>
+                  <button>Start Game</button><span className="gameIDSpan">{"Game ID: " + this.state.gameStarted}</span>
+                  <p>Waiting for other players to join</p>
                   </div>
                 </div>
               </div>
@@ -49,11 +74,12 @@ export class ConnectionDialog extends React.Component<ConnectionDialogProps, Con
               <div className='dialog'>
                 <div>
                   <div>
-                    <button onClick={this.props.onStartGameClick}>Start Game</button>
+                    <button onClick={this.handleStart}>Start Game</button>
                   </div>
                   <div>
-                    <input type="text" placeholder="Enter Game ID" onChange={this.handleChange} /><button>Enter Game</button>
+                    <input type="text" placeholder="Enter Game ID" onChange={this.handleChange} /><button onClick={this.handleJoin}>Enter Game</button>
                   </div>
+                  <p>{this.state.connectError}</p>
                 </div>
               </div>
             </div>

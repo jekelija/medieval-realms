@@ -10,7 +10,8 @@ export interface PlayerProps {
     baseUrl: string
 }
 export interface PlayerState {
-    loggedIn: boolean;
+    authToken: string;
+    connectError: string;
 }
 export class Player extends React.Component <PlayerProps, PlayerState> {
 
@@ -18,28 +19,34 @@ export class Player extends React.Component <PlayerProps, PlayerState> {
         super(props);
 
         this.state = {
-            loggedIn: false
+            authToken: '',
+            connectError: ''
         };
 
         this.handleLoginSuccess = this.handleLoginSuccess.bind(this);
+        this.handleStartGame = this.handleStartGame.bind(this);
+        this.handleJoinGame = this.handleJoinGame.bind(this);
     }
 
-    handleLoginSuccess() {
-        this.setState({loggedIn : true});
+    handleLoginSuccess(authToken: string) {
+        this.setState({authToken : authToken});
     }
 
-    handleJoinGame(id: string) {
+    async handleJoinGame(id: string): Promise<void> {
         
     }
 
-    handleStartGame() {
+    async handleStartGame():Promise<void> {
         
     }
 
     render() {
-        if(this.state.loggedIn) {
-            return (<div>
-                <ConnectionDialog onJoinGameClick={this.handleJoinGame} onStartGameClick={this.handleStartGame} />
+        if(this.state.authToken) {
+            return (
+            <div>
+                <div>
+                    <ConnectionDialog authToken={this.state.authToken} baseUrl={this.props.baseUrl} onJoinGameClick={this.handleJoinGame} onStartGameClick={this.handleStartGame} />
+                </div>
             </div>
             );
         }
