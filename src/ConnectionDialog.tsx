@@ -1,6 +1,6 @@
 import React, { ChangeEvent } from 'react';
 import './ConnectionDialog.css';
-import { postData } from './Utilities';
+import { postData, getData } from './Utilities';
 
 export interface ConnectionDialogProps { authToken:string, baseUrl:string, onStartGameClick:()=>void, onJoinGameClick:(id:string)=>void }
 export interface ConnectionDialogState { connectError:string, gameIdInput:string, friendReady:boolean, gameStarted:string}
@@ -47,6 +47,20 @@ export class ConnectionDialog extends React.Component<ConnectionDialogProps, Con
             shared_state: {}
         }, this.props.authToken);
         this.setState({gameStarted:gameData.data.game_id});
+        let querying = false;
+        const interval = setInterval(async ()=> {
+          if(!querying) {
+            querying = true;
+            try {
+              const joinedGame = await getData(this.props.baseUrl + 'game/get/' + this.state.gameStarted, this.props.authToken);
+              clearInterval(interval);
+            } catch(e) {
+              //do nothing, keep querying 
+              //TODO timeout
+            }
+            querying = false;
+          }
+        }, 500);
       }
       catch(e) {
           this.setState({connectError: 'Error' + e });
