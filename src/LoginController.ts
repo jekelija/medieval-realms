@@ -1,4 +1,4 @@
-import './login';
+import '../css/login';
 
 export class LoginController {
 
