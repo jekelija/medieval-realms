@@ -5,8 +5,8 @@
         <link rel="stylesheet" type="text/css" href="main.css">
     </head>
     <body>
-        <div id='loginScreen'>
-            <div id='loginDialog'>
+        <div id='loginView' class='view center-modal hidden'>
+            <div id='loginDialog' class=''>
                 <div class='loginFlex'>
                     <label for='loginUsername'>Username</label>
                     <input id='loginUsername' type="text"/>
@@ -15,7 +15,31 @@
                     <label for='loginPassword'>Password</label>
                     <input id='loginPassword' type="password"/>
                 </div>
+                <div>
+                    <button id='loginButton'>Login</button>
+                </div>
+                <div>
+                    <span id='loginError'></span>
+                </div>
             </div>
+        </div>
+        <div id='userScreenView' class='view center-modal hidden'>
+            <div id='userScreenDialog'>
+                <div id='userScreenTopFlex'>
+                    <p id='userScreenUsername'>
+
+                    </p>
+                    <div id='userScreenCreateGameDiv'>
+                        <button id='userScreenCreateGame'>Create Game</button>
+                    </div>
+                </div>
+                <div id='userGames'>
+                    
+                </div>
+            </div>
+            
+        </div>
+        <div id='gameView' class='view hidden'>
         </div>
         <script src="bundle.js"></script>
     </body>

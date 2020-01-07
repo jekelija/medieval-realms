@@ -1,3 +1,11 @@
 .loginFlex {
     display: flex;
 }
+
+.loginFlex * {
+    margin: 10px;
+}
+
+#loginDialog {
+    border: 1px solid gray;
+}

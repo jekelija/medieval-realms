@@ -2,9 +2,11 @@
     "forceConsitentCasingInFileNames": true,
     "noImplicitReturns": true,
     "strict": true,
+    "declaration": true,
+    "declarationMap": true,
     "noUnusedLocals": true,
     "outDir": "./dist/",
     "target": "es6",
-    "module": "commonjs",
+    "module": "es6",
     "sourceMap": true
  }

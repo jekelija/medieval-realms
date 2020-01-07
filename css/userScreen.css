@@ -1,0 +1,15 @@
+#userScreenTopFlex {
+    display: flex;
+}
+
+#userScreenCreateGameDiv {
+    flex: 1;
+    text-align: right;
+}
+
+#userScreenDialog {
+    width: 80%;
+    height: 80%;
+    position: relative;
+    border: 1px solid gray;
+}
