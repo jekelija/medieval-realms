@@ -2,7 +2,7 @@ import { IServicesGame } from "./serviceModel/IServicesGame";
 
 export class Services {
 
-    public baseURL = 'https://jddqk01yhc.execute-api.us-east-1.amazonaws.com/dev/';
+    public baseURL = 'https://sojg4gl93j.execute-api.us-east-1.amazonaws.com/dev/';
 
     public currentUser: string;
 
