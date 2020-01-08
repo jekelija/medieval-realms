@@ -1,8 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>Getting Started</title>
-        <link rel="stylesheet" type="text/css" href="main.css">
+        <title>Medieval Realms</title>
     </head>
     <body>
         <div id='loginView' class='view center-modal hidden'>
@@ -30,6 +29,8 @@
 
                     </p>
                     <div id='userScreenCreateGameDiv'>
+                        <input id='userScreenJoinGameInput' type="text" placeholder="Game ID"/>
+                        <button id='userScreenJoinGame'>Join Game</button>
                         <button id='userScreenCreateGame'>Create Game</button>
                     </div>
                 </div>
@@ -41,6 +42,5 @@
         </div>
         <div id='gameView' class='view hidden'>
         </div>
-        <script src="bundle.js"></script>
     </body>
 </html>

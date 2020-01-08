@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "webpack --mode production",
+    "deploy": "npm run build && rm -rf ../medieval-realms-server/client/dist && cp -a dist ../medieval-realms-server/client/dist",
     "start": "webpack-dev-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +21,9 @@
   "keywords": [],
   "description": "",
   "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^3.4.1",
+    "html-webpack-plugin": "^3.2.0",
     "mini-css-extract-plugin": "^0.9.0",
     "node-sass": "^4.13.0",
     "sass-loader": "^8.0.0",

@@ -1,6 +1,7 @@
 const path = require('path');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
-
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 module.exports = {
     entry: './src/index.ts',
     devtool: 'inline-source-map',
@@ -8,9 +9,18 @@ module.exports = {
         contentBase: './dist',
     },
     plugins: [
+        new CleanWebpackPlugin(),
         new MiniCssExtractPlugin({
           filename: '[name].css',
           chunkFilename: '[id].css'
+        }),
+        new HtmlWebpackPlugin({
+            template: 'html/index.html'
+        }),
+        new HtmlWebpackPlugin({
+            filename: 'error.html',
+            template: 'html/error.html',
+            inject: false
         })
     ],
     module: {

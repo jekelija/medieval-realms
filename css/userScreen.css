@@ -13,3 +13,19 @@
     position: relative;
     border: 1px solid gray;
 }
+
+#userGames {
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.userScreenGame.yourTurn {
+    cursor: pointer;
+}
+
+.userScreenGame {
+    border: 1px solid grey;
+    padding: 20px;
+    margin-right: 10px;
+}

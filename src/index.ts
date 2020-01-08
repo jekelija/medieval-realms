@@ -12,4 +12,9 @@ const userScreenController = new UserScreenController(viewManager, services);
 viewManager.registerView(loginController);
 viewManager.registerView(userScreenController);
 
-viewManager.open(VIEW.LOGIN);
+if(services.currentUser) {
+    viewManager.open(VIEW.USER_SCREEN);
+}
+else {
+    viewManager.open(VIEW.LOGIN);
+}

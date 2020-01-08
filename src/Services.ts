@@ -1,10 +1,17 @@
 import { IServicesGame } from "./serviceModel/IServicesGame";
+import { localStorageAvailable } from "./Utilts";
 
 export class Services {
 
     public baseURL = 'https://sojg4gl93j.execute-api.us-east-1.amazonaws.com/dev/';
 
     public currentUser: string;
+
+    constructor() {
+        if(localStorageAvailable()) {
+            this.currentUser = localStorage.getItem('token');
+        }
+    }
 
     async auth(username:string, password:string): Promise<void> {
         await this.request('users/login', 'POST', {
@@ -13,6 +20,19 @@ export class Services {
         });
         //TODO should get token, not just store username
         this.currentUser = username;
+        if(localStorageAvailable()) {
+            localStorage.setItem('token', username);
+        }
+    }
+
+    async createGame():Promise<string> {
+        if(!this.currentUser) {
+            throw {
+                error: 'User must be logged in to create games'
+            };
+        }
+        const response = await this.request('games/user/' + this.currentUser, 'POST');
+        return response.gameid;
     }
 
     async getGames():Promise<IServicesGame[]> {
