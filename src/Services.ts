@@ -25,6 +25,21 @@ export class Services {
         }
     }
 
+    async joinGame(gameId: string): Promise<IServicesGame> {
+        if(!this.currentUser) {
+            throw {
+                error: 'User must be logged in to create games'
+            };
+        }
+        else if(!gameId) {
+            throw {
+                error: 'Must provide a valid game ID'
+            };
+        }
+        const response = await this.request('games/' + gameId + '/' + this.currentUser, 'POST');
+        return response;
+    }
+
     async createGame():Promise<string> {
         if(!this.currentUser) {
             throw {
@@ -42,6 +57,15 @@ export class Services {
             };
         }
         return this.request('games/user/' + this.currentUser, 'GET');
+    }
+
+    async getGame(gameId:string):Promise<IServicesGame> {
+        if(!this.currentUser) {
+            throw {
+                error: 'User must be logged in to get games'
+            };
+        }
+        return this.request('games/' + gameId + '/' + this.currentUser, 'GET');
     }
 
     private async request(url:string, method:string, data?:any): Promise<any> {

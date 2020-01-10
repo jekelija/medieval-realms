@@ -20,7 +20,7 @@
     flex-wrap: wrap;
 }
 
-.userScreenGame.yourTurn {
+.userScreenGame.joinable {
     cursor: pointer;
 }
 

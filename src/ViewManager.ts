@@ -12,7 +12,7 @@ export interface IView {
 
     element(): HTMLDivElement;
 
-    open(): void;
+    open(data?:any): void;
     close(): void;
 }
 
@@ -26,7 +26,7 @@ export class ViewManager {
         this.views.set(view.type(), view);
     }
 
-    open(type:VIEW) {
+    open(type:VIEW, data?:any) {
         if(this.views.has(type)) {
             if(this.currentView) {
                 this.currentView.element().classList.add('hidden');
@@ -34,7 +34,7 @@ export class ViewManager {
             }
             this.currentView = this.views.get(type);
             this.currentView.element().classList.remove('hidden');
-            this.currentView.open();
+            this.currentView.open(data);
         }
         else {
             log.error('Cannot find view of type ' + type);

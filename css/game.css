@@ -1,0 +1,49 @@
+div#gameView {
+    display: flex;
+    flex-flow: column;
+}
+
+div#gameOtherPlayerArea {
+    flex: 0 0 30%;
+}
+
+div#gameSharedArea {
+    flex: 0 0 30%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+div#gameMyArea {
+    flex: 0 0 40%;
+    display: flex;
+}
+
+div#gameTradeRow {
+    display: flex;
+    flex: 1;
+    justify-content: space-evenly;
+}
+
+.gameCard {
+    height: 140px;
+    border: 1px solid black;
+    padding: 10px;
+    border-radius: 5px;
+    width: 105px
+}
+.gameCard.gameCardBack {
+    background: black;
+    color: white;
+}
+
+.gameCard.gameCardDeck {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.gameHand {
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
