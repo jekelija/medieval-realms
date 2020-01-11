@@ -8,7 +8,7 @@ import { Services } from './Services';
 import { IView, VIEW, ViewManager } from './ViewManager';
 import { IServicesGame } from './serviceModel/IServicesGame';
 import { IServicesGameState } from './serviceModel/IServicesGameState';
-import { findAncestor } from './Utilts';
+import { findAncestor, emptyDiv } from './Utilts';
 
 export class UserScreenController implements IView {
     constructor(private viewManager:ViewManager, private services: Services) {
@@ -88,7 +88,8 @@ export class UserScreenController implements IView {
 
     private async getGames(): Promise<void> {
         const games = await this.services.getGames();
-
+        const parent = document.getElementById('userGames');
+        emptyDiv(parent);
         for(let g of games) {
             this.buildGameHtml(g);
         }

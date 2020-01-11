@@ -1,21 +1,37 @@
-div#gameView {
+div#gameInterior {
     display: flex;
     flex-flow: column;
+    height: calc(100% - 40px);
+    padding: 20px;
+    overflow: hidden;
 }
 
 div#gameOtherPlayerArea {
-    flex: 0 0 30%;
+    flex: 0 0 20%;
 }
 
 div#gameSharedArea {
-    flex: 0 0 30%;
+    flex: 0 0 20%;
     display: flex;
     justify-content: space-evenly;
 }
 
+#gamePlayArea {
+    flex: 0 0 20%;
+}
+
 div#gameMyArea {
     flex: 0 0 40%;
+}
+
+.gamePlayerArea {
     display: flex;
+}
+
+div#gamePlayAreaCards {
+    flex: 1;
+    display: flex;
+    justify-content: center;
 }
 
 div#gameTradeRow {
@@ -46,4 +62,31 @@ div#gameTradeRow {
     display: flex;
     justify-content: center;
     flex: 1;
+}
+
+#gameMyArea.gameMyTurn #gameMyButtons {
+    display: block;
+}
+
+#gameMyArea.gameMyTurn .gameHand .gameCard {
+    cursor: pointer;
+}
+
+#gameTradeRow .gameCard.gameCard.gameCardClickable {
+    cursor: pointer;
+}
+
+#gameMyArea #gameMyButtons {
+    display: none;
+}
+
+button#gameHome {
+    position: absolute;
+    height: 40px;
+    left: 10px;
+    top: 10px;
+}
+
+.gameCard.gameCardClickable {
+    border: 2px solid blue;
 }

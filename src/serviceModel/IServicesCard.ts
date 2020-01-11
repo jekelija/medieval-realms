@@ -8,8 +8,10 @@ export enum Faction {
 
 export interface IServicesCard
 {
+    id: string;
     faction: Faction;
 
+    cost: number;
     trade: number;
     authority: number;
     attack: number;
