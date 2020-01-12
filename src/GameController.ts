@@ -6,9 +6,14 @@ import { IServicesGame } from "./serviceModel/IServicesGame";
 import { IServicesCard } from './serviceModel/IServicesCard';
 import { emptyDiv, findAncestor } from './Utilts';
 import { IServicesGameState } from './serviceModel/IServicesGameState';
+import { TurnInfo } from './model/turninfo';
+import { IServicesTurnInfo } from './serviceModel/IServicesTurnHistory';
+import { IServicesPlayerState } from './serviceModel/IServicesPlayerState';
 
 export class GameController implements IView {
     private game:IServicesGame;
+    private currentTurn:TurnInfo = null;
+
     constructor(private viewManager:ViewManager, private services: Services) {
         document.getElementById('gameHome').addEventListener('click', e=> {
             viewManager.open(VIEW.USER_SCREEN);
@@ -21,6 +26,16 @@ export class GameController implements IView {
                 }
             }
         });
+        document.getElementById('gameAttack').addEventListener('click', e=> {
+            if(this.isMyTurn()) {
+                this.attack();
+            }
+        });
+        document.getElementById('gameEndTurn').addEventListener('click', e=> {
+            if(this.isMyTurn()) {
+                this.endTurn();
+            }
+        });
         document.getElementById('gameTradeRow').addEventListener('click', e=> {
             if(this.isMyTurn()) {
                 const card = findAncestor(e.target as HTMLElement, 'gameCard');
@@ -31,71 +46,78 @@ export class GameController implements IView {
         });
     }
 
+    private endTurn(): void {
+        const myData = this.getUserData();
+        myData.health += this.currentTurn.authority;
+
+        // save off turn info, then clear local one before refreshing UI
+        const servicesTurnInfo: IServicesTurnInfo = {
+
+        }
+
+        //TODO send up to services, add refresh buttons so other user can see
+
+        //after sending to services (to ensure that turn info was stored ), clear out turn
+        //refersh this.currentGame from service response
+        this.currentTurn = null;
+        this.refreshUI();
+    }
+
     private buyCard(cardElement:HTMLElement):void {
         for(let i = 0; i < this.game.shared_data.tradeRow.length; ++i) {
             const c = this.game.shared_data.tradeRow[i];
             if(c.id === cardElement.dataset.id) {
                 //take card off top of draw pile and put in trade row
                 this.game.shared_data.tradeRow.splice(i, 1);
-                //TODO check for no cards left
-                const newCard = this.game.shared_data.drawPile.shift();
-                this.game.shared_data.tradeRow.push(newCard);
-
-                //make non clickable
-                cardElement.classList.remove('gameCardClickable');
-
-                //TODO only effect model, then call refresh UI. Dont try and mess with UI at all. that way lies madness. Do that here and in playCard
+                // check for no cards left
+                if(this.game.shared_data.drawPile.length > 0) {
+                    const newCard = this.game.shared_data.drawPile.shift();
+                    this.game.shared_data.tradeRow.push(newCard);
+                }
+                //add to discard pile
+                const userData = this.getUserData();
+                userData.discardPile.push(c);
                 
-                //put in discard pile
-                this.updateCurrentStock(c.trade);
-                document.getElementById('gameMyDiscard').appendChild(cardElement);
+                //decrease trade
+                this.currentTurn.totalTrade += c.cost;
+                this.currentTurn.trade -= c.cost;
+                this.currentTurn.cardsAcquired.push(c);
+
+                this.refreshUI();
                 break;
             }
         }
+    }
+
+    private attack():void {
+        const otherData = this.getOtherUserData();
+        otherData.health -= this.currentTurn.attack;
+        this.currentTurn.totalAttack += this.currentTurn.attack;
+        this.currentTurn.attack = 0;
+        this.refreshUI();
     }
 
     private playCard(cardElement:HTMLElement):void {
         const userdata = this.game.user1 === this.services.currentUser ? this.game.user1_data : this.game.user2_data;
-        for(let c of userdata.hand) {
+        for(let i = 0; i < userdata.hand.length; ++i) {
+            const c = userdata.hand[i];
             if(c.id === cardElement.dataset.id) {
-                cardElement.classList.remove('gameCardClickable');
+                userdata.hand.splice(i, 1);
+                this.currentTurn.cardsPlayed.push(c);
                 this.updateCurrentStock(c.trade, c.attack, c.authority);
-                document.getElementById('gamePlayAreaCards').appendChild(cardElement);
                 break;
             }
         }
     }
 
-    private resetCurrentStock() {
-        document.getElementById('gamePlayTrade').innerHTML = "0";
-        document.getElementById('gamePlayAttack').innerHTML = "0";
-        document.getElementById('gamePlayAuthority').innerHTML = "0";
-    }
-
     private updateCurrentStock(trade:number, attack:number, authority: number): void {
-        let currentTrade = parseInt(document.getElementById('gamePlayTrade').innerHTML);
-        let currentAttack = parseInt(document.getElementById('gamePlayAttack').innerHTML);
-        let currentAuthority = parseInt(document.getElementById('gamePlayAuthority').innerHTML);
-
-        currentTrade += trade;
-        currentAttack += attack;
-        currentAuthority += authority;
-
-        document.getElementById('gamePlayTrade').innerHTML = currentTrade.toString();
-        document.getElementById('gamePlayAttack').innerHTML = currentAttack.toString();
-        document.getElementById('gamePlayAuthority').innerHTML = currentAuthority.toString();
-
-        //go through the trade deck, highlight whats available
-        for(let c of this.game.shared_data.tradeRow) {
-            const cardElement = document.getElementById('gameTradeRow').querySelector('[data-id="' + c.id + '"]');
-            if(c.cost <= currentTrade) {
-                cardElement.classList.add('gameCardClickable');
-            }
-            else {
-                cardElement.classList.remove('gameCardClickable');
-            }
-        }
+        this.currentTurn.trade += trade;
+        this.currentTurn.attack += attack;
+        this.currentTurn.authority += authority;
+        
+        this.refreshUI();
     }
+
 
     open(game:IServicesGame):void {
         if(!game) {
@@ -104,7 +126,9 @@ export class GameController implements IView {
             };
         }
         this.game = game;
-        this.resetCurrentStock();
+        if(this.isMyTurn()) {
+            this.currentTurn = new TurnInfo();
+        }
         this.refreshUI();
     }
     
@@ -120,7 +144,7 @@ export class GameController implements IView {
         return document.getElementById('gameView') as HTMLDivElement;
     }
 
-    isMyTurn() {
+    isMyTurn():boolean {
         if(!this.game) {
             return false;
         }
@@ -134,6 +158,20 @@ export class GameController implements IView {
         return false;
     }
 
+    getUserData(): IServicesPlayerState {
+        if(!this.game) {
+            return null;
+        }
+        return this.game.user1 == this.services.currentUser ? this.game.user1_data : this.game.user2_data;
+    }
+
+    getOtherUserData(): IServicesPlayerState {
+        if(!this.game) {
+            return null;
+        }
+        return this.game.user1 != this.services.currentUser ? this.game.user1_data : this.game.user2_data;
+    }
+
     refreshUI(): void {
         if(!this.game) {
             return;
@@ -145,13 +183,36 @@ export class GameController implements IView {
         emptyDiv(document.getElementById('gameHalflings'));
         emptyDiv(document.getElementById('gameTradeRow'));
         emptyDiv(document.getElementById('gameMyHand'));
+        emptyDiv(document.getElementById('gameMyDiscard'));
         emptyDiv(document.getElementById('gameMyDeck'));
+        emptyDiv(document.getElementById('gamePlayAreaCards'));
+        emptyDiv(document.getElementById('gameOtherDeck'));
+        emptyDiv(document.getElementById('gameOtherDiscard'));
+        emptyDiv(document.getElementById('gameOtherHand'));
 
+        
         //go top to bottom
         //TODO do as diff
-        //TODO draw their space
 
-        if(this.isMyTurn()) {
+        //other players
+        const otherData = this.getOtherUserData();
+        for(let i = 0; i < otherData.hand.length; ++i) {
+            const cardElement = this.createFaceDownCard(otherData.hand[i]);
+            document.getElementById('gameOtherHand').appendChild(cardElement);
+        }
+
+        const otherDiscardPile = this.drawDiscard(otherData.discardPile);
+        if(otherDiscardPile) {
+            document.getElementById('gameOtherDiscard').appendChild(otherDiscardPile);
+        }
+        
+        const otherDrawPile = this.drawDeck(otherData.drawPile, otherData.health);
+        if(otherDrawPile) {
+            document.getElementById('gameOtherDeck').appendChild(otherDrawPile);
+        }
+
+        const myTurn = this.isMyTurn();
+        if(myTurn) {
             document.getElementById('gameMyArea').classList.add('gameMyTurn');
         }
         else {
@@ -170,32 +231,93 @@ export class GameController implements IView {
             document.getElementById('gameTradeRow').appendChild(this.createFaceUpCard(this.game.shared_data.tradeRow[i]));
         }
 
+        //if its my turn show my current turn in the game play area
+        let turnInfo: IServicesTurnInfo | TurnInfo;
+        if(myTurn) {
+            turnInfo = this.currentTurn;
+        }
+        //otherwise, show the turn info from shared state
+        else if(this.game.shared_data.turnHistory.length > 0){
+            turnInfo = this.game.shared_data.turnHistory[this.game.shared_data.turnHistory.length - 1];
+        }
+
+        if(turnInfo) {
+            document.getElementById('gamePlayTrade').innerHTML = turnInfo.trade.toString();
+            document.getElementById('gamePlayAttack').innerHTML = turnInfo.attack.toString();
+            document.getElementById('gamePlayAuthority').innerHTML = turnInfo.authority.toString();
+
+            //if its my turn, also display my played cards
+            if(myTurn) {
+                for(let c of (turnInfo as TurnInfo).cardsPlayed) {
+                    document.getElementById('gamePlayAreaCards').appendChild(this.createFaceUpCard(c));
+                }
+
+                //go through the trade deck, highlight whats available
+                for(let c of this.game.shared_data.tradeRow) {
+                    const cardElement = document.getElementById('gameTradeRow').querySelector('[data-id="' + c.id + '"]');
+                    if(c.cost <= turnInfo.trade) {
+                        cardElement.classList.add('gameCardClickable');
+                    }
+                    else {
+                        cardElement.classList.remove('gameCardClickable');
+                    }
+                }
+            }     
+        }
+           
+
         //draw my space
-        const myData = this.game.user1 === this.services.currentUser ? this.game.user1_data : this.game.user2_data;
+        const myData = this.getUserData();
         for(let i = 0; i < myData.hand.length; ++i) {
             const cardElement = this.createFaceUpCard(myData.hand[i]);
-            cardElement.classList.add('gameCardClickable');
+            if(myTurn) {
+                cardElement.classList.add('gameCardClickable');
+            }
             document.getElementById('gameMyHand').appendChild(cardElement);
         }
         
-        const myDrawPile = this.drawDeck(myData.drawPile);
+        const myDiscardPile = this.drawDiscard(myData.discardPile);
+        if(myDiscardPile) {
+            document.getElementById('gameMyDiscard').appendChild(myDiscardPile);
+        }
+
+        const myDrawPile = this.drawDeck(myData.drawPile, myData.health);
         if(myDrawPile) {
             document.getElementById('gameMyDeck').appendChild(myDrawPile);
         }
     }
 
-    private drawDeck(cards: IServicesCard[]):HTMLDivElement {
+    private drawDeck(cards:IServicesCard[], showHealth?:number):HTMLDivElement {
         if(cards.length > 0) {
             const div = document.createElement('div');
             div.classList.add('gameCard');
             div.classList.add('gameCardBack');
             div.classList.add('gameCardDeck');
 
-            const s = document.createElement('span');
+            const s = document.createElement('p');
             s.classList.add('gameDeckLeft')
             s.innerHTML = cards.length.toString();
             div.appendChild(s);
+
+            if(showHealth !== null && showHealth !== undefined) {
+                const h = document.createElement('p');
+                h.classList.add('gamePlayerHealth')
+                h.innerHTML = 'Health: ' + showHealth.toString();
+                div.appendChild(h);
+            }
             return div;
+        }
+        else if(showHealth !== null && showHealth !== undefined) {
+            const h = document.createElement('p');
+            h.classList.add('gamePlayerHealth')
+            h.innerHTML = 'Health: ' + showHealth.toString();
+            return h;
+        }
+    }
+
+    private drawDiscard(cards: IServicesCard[]):HTMLDivElement {
+        if(cards.length > 0) {
+            return this.createFaceUpCard(cards[cards.length-1]);
         }
         return null;
     }
@@ -217,6 +339,13 @@ export class GameController implements IView {
         div.appendChild(a);
         div.appendChild(t);
         div.appendChild(auth);
+        return div;
+    }
+
+    private createFaceDownCard(card: IServicesCard):HTMLDivElement {
+        const div = document.createElement('div');
+        div.classList.add('gameCard');
+        div.classList.add('gameCardBack');
         return div;
     }
 }

@@ -54,8 +54,9 @@ div#gameTradeRow {
 
 .gameCard.gameCardDeck {
     display: flex;
-    justify-content: center;
+    justify-content: space-evenly;
     align-items: center;
+    flex-flow: column;
 }
 
 .gameHand {
@@ -64,20 +65,16 @@ div#gameTradeRow {
     flex: 1;
 }
 
-#gameMyArea.gameMyTurn #gameMyButtons {
-    display: block;
+.gameHand .gameCard {
+    margin: 0px 5px;
 }
 
 #gameMyArea.gameMyTurn .gameHand .gameCard {
     cursor: pointer;
 }
 
-#gameTradeRow .gameCard.gameCard.gameCardClickable {
+#gameTradeRow .gameCard.gameCardClickable {
     cursor: pointer;
-}
-
-#gameMyArea #gameMyButtons {
-    display: none;
 }
 
 button#gameHome {
