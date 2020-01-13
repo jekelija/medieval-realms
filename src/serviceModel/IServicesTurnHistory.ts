@@ -4,4 +4,5 @@ export interface IServicesTurnInfo {
     authority: number;
     cardsAcquired: string[];
     cardsTrashed: string[];
+    cardsPlayed: string[];
 }

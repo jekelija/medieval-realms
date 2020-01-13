@@ -33,6 +33,8 @@ export class GameController implements IView {
         });
         document.getElementById('gameEndTurn').addEventListener('click', e=> {
             if(this.isMyTurn()) {
+                //make it not my turn immediately so no double click on button
+                this.game.user1 == this.services.currentUser ? this.game.gamestate = IServicesGameState.USER2_TURN : this.game.gamestate = IServicesGameState.USER1_TURN;
                 this.endTurn();
             }
         });
@@ -52,10 +54,25 @@ export class GameController implements IView {
 
         // save off turn info, then clear local one before refreshing UI
         const servicesTurnInfo: IServicesTurnInfo = {
+            trade: this.currentTurn.totalTrade,
+            attack: this.currentTurn.totalAttack,
+            authority: this.currentTurn.authority,
+            cardsAcquired: this.currentTurn.cardsAcquired.map(c=>c.name),
+            cardsTrashed: this.currentTurn.cardsTrashed.map(c=>c.name),
+            cardsPlayed: this.currentTurn.cardsPlayed.map(c=>c.name)
+        };
 
+        //take all played cards and put in discard
+        this.getUserData().discardPile = this.getUserData().discardPile.concat(this.currentTurn.cardsPlayed);
+        this.getUserData().discardPile = this.getUserData().discardPile.concat(this.getUserData().hand);
+
+        if(!this.game.shared_data.turnHistory) {
+            this.game.shared_data.turnHistory = [];
         }
+        this.game.shared_data.turnHistory.push(servicesTurnInfo);
 
-        //TODO send up to services, add refresh buttons so other user can see
+        // send up to services, add refresh buttons so other user can see
+        this.services.endTurn(this.game.gameid, this.game);
 
         //after sending to services (to ensure that turn info was stored ), clear out turn
         //refersh this.currentGame from service response

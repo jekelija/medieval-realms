@@ -10,6 +10,7 @@ export interface IServicesCard
 {
     id: string;
     faction: Faction;
+    name:string;
 
     cost: number;
     trade: number;

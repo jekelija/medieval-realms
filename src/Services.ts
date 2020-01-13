@@ -25,6 +25,25 @@ export class Services {
         }
     }
 
+    async endTurn(gameId: string, game:IServicesGame): Promise<void> {
+        if(!this.currentUser) {
+            throw {
+                error: 'User must be logged in to create games'
+            };
+        }
+        else if(!gameId) {
+            throw {
+                error: 'Must provide a valid game ID'
+            };
+        }
+        const response = await this.request('games/' + gameId + '/' + this.currentUser + '/turn', 'POST', {
+            sharedState : game.shared_data,
+            playerData: this.currentUser === game.user1 ? game.user1_data : game.user2_data,
+            otherPlayerHealth: this.currentUser === game.user1 ? game.user2_data.health : game.user1_data.health,
+        });
+        return response;
+    }
+
     async joinGame(gameId: string): Promise<IServicesGame> {
         if(!this.currentUser) {
             throw {
