@@ -87,3 +87,13 @@ button#gameHome {
 .gameCard.gameCardClickable {
     border: 2px solid blue;
 }
+
+.gameCardAttributeRow {
+    display: flex;
+    justify-content: space-evenly;
+}
+
+.gameBases {
+    overflow: auto;
+    max-height: 175px;
+}

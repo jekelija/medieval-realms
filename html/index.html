@@ -45,6 +45,9 @@
             <button id='gameHome'>Home</button>
             <div id='gameInterior'>
                 <div id='gameOtherPlayerArea' class='gamePlayerArea'>
+                    <div id='gameOtherBases' class='gameBases'>
+                    
+                    </div>
                     <div id='gameOtherHand' class='gameHand'>
                     
                     </div>
@@ -54,8 +57,9 @@
                     <div id='gameOtherDeck' class='gameDeck'>
                     
                     </div>
-                    <div id='gameAttack'>
-                        <button>Attack</button>
+                    <div id='gameButtons'>
+                        <button id='gameAttack'>Attack</button>
+                        <button id='gameRefresh'>Refresh</button>
                     </div>
                 </div>
                 <div id='gameSharedArea'>
@@ -70,16 +74,26 @@
                     </div>
                 </div>
                 <div id='gamePlayArea' class='gamePlayerArea'>
+                    <div style="flex: 0 0 200px;">
+                        <p>Last Turn Totals</p>
+                        <p>Trade: <span id='gameLastTrade'></span></p>
+                        <p>Attack: <span id='gameLastAttack'></span></p>
+                        <p>Authority: <span id='gameLastAuthority'></span></p>
+                    </div>
                     <div id='gamePlayAreaCards'>
 
                     </div>
                     <div style="flex: 0 0 200px;">
+                        <p>Current Turn Totals</p>
                         <p>Trade: <span id='gamePlayTrade'></span></p>
                         <p>Attack: <span id='gamePlayAttack'></span></p>
                         <p>Authority: <span id='gamePlayAuthority'></span></p>
                     </div>
                 </div>
                 <div id='gameMyArea' class='gamePlayerArea'>
+                    <div id='gameMyBases' class='gameBases'>
+                    
+                    </div>
                     <div id='gameMyHand' class='gameHand'>
                     
                     </div>
