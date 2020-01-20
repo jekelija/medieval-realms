@@ -28,7 +28,9 @@ export interface IServicesCard
     faction: Faction;
     name:string;
     isBase: boolean;
-
+    isOutpost: boolean;
+    baseDefense: number;
+    
     cost: number;
     trade: number;
     authority: number;

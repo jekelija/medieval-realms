@@ -12,6 +12,8 @@ import { TurnInfo } from './model/turninfo';
 import { IServicesTurnInfo } from './serviceModel/IServicesTurnHistory';
 import { IServicesPlayerState } from './serviceModel/IServicesPlayerState';
 
+import { ImageExport } from './ImageExport';
+
 export class GameController implements IView {
     private game:IServicesGame;
     private currentTurn:TurnInfo = null;
@@ -21,17 +23,53 @@ export class GameController implements IView {
         document.getElementById('gameHome').addEventListener('click', e=> {
             viewManager.open(VIEW.USER_SCREEN);
         }); 
+
+        document.getElementById('gameLastTurnOk').addEventListener('click', e=> {
+            document.getElementById('gameLastCardModalBackground').classList.add('hidden');
+        });
+
+        document.getElementById('gameOtherDeck').addEventListener('click', e=> {
+            if(this.isMyTurn()) {
+                if(this.hasTargetReticleOnCard(e.currentTarget as HTMLDivElement)) {
+                    this.removeTargetReticle(e.currentTarget as HTMLDivElement);
+                    this.attack();
+                }
+                else if(this.canAttack() && this.currentTurn.attack > 0) {
+                    this.addTargetReticleToCard(e.currentTarget as HTMLDivElement);
+                }
+            }
+            
+        });
+
+        document.getElementById('gameOtherBases').addEventListener('click', e=> {
+            const cardElement = findAncestor(e.target as HTMLElement, 'gameCard');
+            if(cardElement && this.isMyTurn()) {
+                if(this.hasTargetReticleOnCard(cardElement as HTMLDivElement)) {
+                    this.removeTargetReticle(cardElement as HTMLDivElement);
+                    this.attackBase(cardElement as HTMLDivElement);
+                }
+                else {
+                    for(let i = 0; i < this.getOtherUserData().basesInPlay.length; ++i) {
+                        const c = this.getOtherUserData().basesInPlay[i];
+                        if(c.id === cardElement.dataset.id) {
+                            //if im an outpost, can always attack, otherwise must be attackable
+                            if(this.currentTurn.attack >= c.baseDefense && (c.isOutpost || this.canAttack())) {
+                                this.addTargetReticleToCard(cardElement as HTMLDivElement);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            
+        });
+
         document.getElementById('gameMyHand').addEventListener('click', e=> {
             if(this.isMyTurn()) {
                 const card = findAncestor(e.target as HTMLElement, 'gameCard');
                 if(card) {
                     this.playCard(card);
                 }
-            }
-        });
-        document.getElementById('gameAttack').addEventListener('click', e=> {
-            if(this.isMyTurn()) {
-                this.attack();
             }
         });
         document.getElementById('gameRefresh').addEventListener('click', e=> {
@@ -54,6 +92,17 @@ export class GameController implements IView {
         });
     }
 
+    private canAttack(): boolean {
+        let hasBaseDefenseLeft = false;
+        for(let b of this.getOtherUserData().basesInPlay) {
+            if(b.isOutpost) {
+                hasBaseDefenseLeft = true;
+                break;
+            }
+        }
+        return !hasBaseDefenseLeft;
+    }
+
     private async refreshGame(): Promise<void> {
         if(!this.isMyTurn() && !this.refreshing) {
             try {
@@ -61,6 +110,7 @@ export class GameController implements IView {
                 if(this.game) {
                     const game = await this.services.getGame(this.game.gameid);
                     this.initializeGame(game);
+
                 }
             } catch (e) {
                 log.error(e);
@@ -147,6 +197,20 @@ export class GameController implements IView {
         }
     }
 
+    private attackBase(cardElement:HTMLDivElement): void {
+        for(let i = 0; i < this.getOtherUserData().basesInPlay.length; ++i) {
+            const c = this.getOtherUserData().basesInPlay[i];
+            if(c.id === cardElement.dataset.id) {
+                this.getOtherUserData().basesInPlay.splice(i, 1);
+                this.getOtherUserData().discardPile.push(c);
+                this.currentTurn.totalAttack += c.baseDefense;
+                this.currentTurn.attack -= c.baseDefense;
+                this.refreshUI();
+                break;
+            }
+        }
+    }
+
     private attack():void {
         const otherData = this.getOtherUserData();
         otherData.health -= this.currentTurn.attack;
@@ -193,6 +257,32 @@ export class GameController implements IView {
         this.game = game;
         if(this.isMyTurn() && !this.currentTurn) {
             this.startTurn();
+            if(this.game.shared_data.turnHistory.length > 0) {
+                const lastOtherPlayerTurn = this.game.shared_data.turnHistory[this.game.shared_data.turnHistory.length - 1];
+                document.getElementById('gameLastTrade').innerHTML = lastOtherPlayerTurn.trade.toString();
+                document.getElementById('gameLastAttack').innerHTML = lastOtherPlayerTurn.attack.toString();
+                document.getElementById('gameLastAuthority').innerHTML = lastOtherPlayerTurn.authority.toString();
+
+                const cardsBoughtDiv = document.getElementById('gameLastCardsBought');
+                emptyDiv(cardsBoughtDiv);
+
+                for(let c of lastOtherPlayerTurn.cardsAcquired) {
+                    const p = document.createElement('p');
+                    p.innerHTML = c;
+                    cardsBoughtDiv.appendChild(p);
+                }
+
+                const cardsTrashedDiv = document.getElementById('gameLastCardsTrashed');
+                emptyDiv(cardsTrashedDiv);
+
+                for(let c of lastOtherPlayerTurn.cardsTrashed) {
+                    const p = document.createElement('p');
+                    p.innerHTML = c;
+                    cardsTrashedDiv.appendChild(p);
+                }
+
+                document.getElementById('gameLastCardModalBackground').classList.remove('hidden');
+            }
         }
         this.refreshUI();
     }
@@ -333,15 +423,6 @@ export class GameController implements IView {
                 }
             }
         }  
-        //otherwise make sure to display last turn
-        else {
-            const lastOtherPlayerTurn = this.game.shared_data.turnHistory[this.game.shared_data.turnHistory.length - 1];
-            document.getElementById('gameLastTrade').innerHTML = lastOtherPlayerTurn.trade.toString();
-            document.getElementById('gameLastAttack').innerHTML = lastOtherPlayerTurn.attack.toString();
-            document.getElementById('gameLastAuthority').innerHTML = lastOtherPlayerTurn.authority.toString();
-        }   
-        
-           
 
         //draw my space
         const myData = this.getUserData();
@@ -369,31 +450,23 @@ export class GameController implements IView {
     }
 
     private drawDeck(cards:IServicesCard[], showHealth?:number):HTMLDivElement {
-        if(cards.length > 0) {
-            const div = document.createElement('div');
-            div.classList.add('gameCard');
-            div.classList.add('gameCardBack');
-            div.classList.add('gameCardDeck');
+        const div = document.createElement('div');
+        div.classList.add('gameCard');
+        div.classList.add('gameCardBack');
+        div.classList.add('gameCardDeck');
 
-            const s = document.createElement('p');
-            s.classList.add('gameDeckLeft')
-            s.innerHTML = cards.length.toString();
-            div.appendChild(s);
+        const s = document.createElement('p');
+        s.classList.add('gameDeckLeft')
+        s.innerHTML = cards.length.toString();
+        div.appendChild(s);
 
-            if(showHealth !== null && showHealth !== undefined) {
-                const h = document.createElement('p');
-                h.classList.add('gamePlayerHealth')
-                h.innerHTML = 'Health: ' + showHealth.toString();
-                div.appendChild(h);
-            }
-            return div;
-        }
-        else if(showHealth !== null && showHealth !== undefined) {
+        if(showHealth !== null && showHealth !== undefined) {
             const h = document.createElement('p');
             h.classList.add('gamePlayerHealth')
             h.innerHTML = 'Health: ' + showHealth.toString();
-            return h;
+            div.appendChild(h);
         }
+        return div;
     }
 
     private drawDiscard(cards: IServicesCard[]):HTMLDivElement {
@@ -432,7 +505,12 @@ export class GameController implements IView {
         div.appendChild(cardAttributes);
         if(card.isBase) {
             const b = document.createElement('p');
-            b.innerHTML = 'Base';
+            if(card.isOutpost) {
+                b.innerHTML = 'Outpost ' + card.baseDefense;
+            }
+            else {
+                b.innerHTML = 'Base ' + card.baseDefense;
+            }
             div.appendChild(b);
         }
         return div;
@@ -443,5 +521,30 @@ export class GameController implements IView {
         div.classList.add('gameCard');
         div.classList.add('gameCardBack');
         return div;
+    }
+
+
+
+    private removeTargetReticle(card: HTMLDivElement): void {
+        const reticle = card.getElementsByClassName('gameCardTargetReticleContainer');
+        if(reticle.length > 0) {
+            reticle[0].remove();
+        }
+    }
+
+    private hasTargetReticleOnCard(card: HTMLDivElement): boolean {
+        return card.getElementsByClassName('gameCardTargetReticleContainer').length > 0;
+    }
+
+    private addTargetReticleToCard(card: HTMLDivElement): void {
+        const div = document.createElement('div');
+        div.classList.add('gameCardTargetReticleContainer');
+
+        const img = document.createElement('img');
+        img.classList.add('gameCardTargetReticle');
+        img.src = ImageExport.TARGET_RETICLE;
+        div.appendChild(img);
+        
+        card.appendChild(div);
     }
 }

@@ -42,6 +42,23 @@
             
         </div>
         <div id='gameView' class='view hidden'>
+            <div id='gameLastCardModalBackground' class='modalBackground view hidden'>
+                <div class='modal'>
+                    <p>Last Player Turn Summary</p>
+                    <p>Trade: <span id='gameLastTrade'></span></p>
+                    <p>Attack: <span id='gameLastAttack'></span></p>
+                    <p>Authority: <span id='gameLastAuthority'></span></p>
+                    <p>Cards Bought</p>
+                    <div id='gameLastCardsBought'>
+
+                    </div>
+                    <p>Cards Trashed</p>
+                    <div id='gameLastCardsTrashed'>
+
+                    </div>
+                    <button id='gameLastTurnOk'>Ok</button>
+                </div>
+            </div>
             <button id='gameHome'>Home</button>
             <div id='gameInterior'>
                 <div id='gameOtherPlayerArea' class='gamePlayerArea'>
@@ -75,10 +92,10 @@
                 </div>
                 <div id='gamePlayArea' class='gamePlayerArea'>
                     <div style="flex: 0 0 200px;">
-                        <p>Last Turn Totals</p>
-                        <p>Trade: <span id='gameLastTrade'></span></p>
-                        <p>Attack: <span id='gameLastAttack'></span></p>
-                        <p>Authority: <span id='gameLastAuthority'></span></p>
+                        <p>Chat box</p>
+                        <div id='gameChatBox'>
+
+                        </div>
                     </div>
                     <div id='gamePlayAreaCards'>
 
