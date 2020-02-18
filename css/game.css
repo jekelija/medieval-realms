@@ -122,3 +122,31 @@ button#gameHome {
     position: relative;
     cursor: pointer;
 }
+
+div#gameChatBox {
+    min-height: 200px;
+    border: 1px solid black;
+    padding: 10px;
+}
+
+p.gameChatLine.gameChatLineOther {
+    color: red;
+}
+
+p.gameChatLine.gameChatLineMine {
+    color: blue;
+}
+
+#gameChat {
+    flex: 0 0 200px;
+    margin: 10px 0px;
+    border: 1px solid black;
+    padding: 5px;
+    overflow: auto;
+}
+
+div#gameShowCards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-gap: 20px;
+}

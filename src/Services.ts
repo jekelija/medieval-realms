@@ -59,6 +59,23 @@ export class Services {
         return response;
     }
 
+    async addChat(gameId: string, message:string): Promise<IServicesGame> {
+        if(!this.currentUser) {
+            throw {
+                error: 'User must be logged in to chat'
+            };
+        }
+        else if(!gameId) {
+            throw {
+                error: 'Must provide a valid game ID'
+            };
+        }
+        const response = await this.request('games/' + gameId + '/' + this.currentUser + '/chat', 'POST', {
+            message
+        });
+        return response;
+    }
+
     async createGame():Promise<string> {
         if(!this.currentUser) {
             throw {

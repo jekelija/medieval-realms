@@ -7,5 +7,4 @@ export interface IServicesSharedState {
     drawPile: IServicesCard[];
     halflings: IServicesCard[];
     turnHistory: IServicesTurnInfo[];
-    chatHistory: IServicesChatInfo[];
 }

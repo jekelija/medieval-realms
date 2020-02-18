@@ -5,7 +5,7 @@ import * as log from 'loglevel';
 import { ViewManager, VIEW, IView } from "./ViewManager";
 import { Services } from "./Services";
 import { IServicesGame } from "./serviceModel/IServicesGame";
-import { IServicesCard } from './serviceModel/IServicesCard';
+import { IServicesCard, CardActionType } from './serviceModel/IServicesCard';
 import { emptyDiv, findAncestor } from './Utilts';
 import { IServicesGameState } from './serviceModel/IServicesGameState';
 import { TurnInfo } from './model/turninfo';
@@ -18,14 +18,47 @@ export class GameController implements IView {
     private game:IServicesGame;
     private currentTurn:TurnInfo = null;
     private refreshing = false;
+    private trashing = false;
 
     constructor(private viewManager:ViewManager, private services: Services) {
         document.getElementById('gameHome').addEventListener('click', e=> {
             viewManager.open(VIEW.USER_SCREEN);
         }); 
+        const modalBackgrounds = document.getElementsByClassName('modalBackground');
+        for(let i = 0; i < modalBackgrounds.length; ++i) {
+            const mb = modalBackgrounds[i];
+            mb.addEventListener('click', e=> {
+                mb.classList.add('hidden');
+            });
+        }
+
+        document.getElementById('gameOtherDiscard').addEventListener('click', e=> {
+            this.showCardsModal(this.getOtherUserData().discardPile);
+        });
+        document.getElementById('gameOtherDeck').addEventListener('click', e=> {
+            this.showCardsModal(this.getOtherUserData().drawPile);
+        });
+        document.getElementById('gameMyDiscard').addEventListener('click', e=> {
+            this.showCardsModal(this.getUserData().discardPile);
+        });
+        document.getElementById('gameMyDeck').addEventListener('click', e=> {
+            this.showCardsModal(this.getUserData().drawPile);
+        });
 
         document.getElementById('gameLastTurnOk').addEventListener('click', e=> {
             document.getElementById('gameLastCardModalBackground').classList.add('hidden');
+        });
+
+        document.getElementById('gameChatText').addEventListener('keyup', e=> {
+            if(e.key.toLowerCase() == 'enter' && this.game) {
+                const input = e.currentTarget as HTMLInputElement;
+                if(input.value) {
+                    this.services.addChat(this.game.gameid, input.value).then(()=> {
+                        input.value = '';
+                        this.refreshGame();
+                    });
+                }
+            }
         });
 
         document.getElementById('gameOtherDeck').addEventListener('click', e=> {
@@ -66,9 +99,21 @@ export class GameController implements IView {
 
         document.getElementById('gameMyHand').addEventListener('click', e=> {
             if(this.isMyTurn()) {
-                const card = findAncestor(e.target as HTMLElement, 'gameCard');
-                if(card) {
-                    this.playCard(card);
+                const cardElement = findAncestor(e.target as HTMLElement, 'gameCard');
+                if(cardElement) {
+                    if(this.trashing) {
+                        if(this.hasTargetReticleOnCard(cardElement as HTMLDivElement)) {
+                            this.removeTargetReticle(cardElement as HTMLDivElement);
+                            this.trashCardFromHand(cardElement as HTMLDivElement);
+                            this.trashing = false;
+                        }
+                        else {
+                            this.addTargetReticleToCard(cardElement as HTMLDivElement);
+                        }
+                    }
+                    else {
+                        this.playCard(cardElement);
+                    }
                 }
             }
         });
@@ -103,24 +148,36 @@ export class GameController implements IView {
         return !hasBaseDefenseLeft;
     }
 
+    private showCardsModal(cards: IServicesCard[]): void {
+        const div = document.getElementById('gameShowCards');
+        emptyDiv(div);
+
+        for(let c of cards) {
+            const cardElement = this.createFaceUpCard(c);
+            div.appendChild(cardElement);
+        }
+
+        document.getElementById('gameShowCardsModalBackground').classList.remove('hidden');
+    }
+
     private async refreshGame(): Promise<void> {
-        if(!this.isMyTurn() && !this.refreshing) {
+        if(!this.refreshing) {
             try {
                 this.refreshing = true;
                 if(this.game) {
                     const game = await this.services.getGame(this.game.gameid);
                     this.initializeGame(game);
-
                 }
             } catch (e) {
                 log.error(e);
             }
             this.refreshing = false;
         }
-        
     }
 
     private endTurn(): void {
+        this.trashing = false;
+
         const myData = this.getUserData();
         myData.health += this.currentTurn.authority;
 
@@ -143,14 +200,26 @@ export class GameController implements IView {
         }
         this.game.shared_data.turnHistory.push(servicesTurnInfo);
 
+        this.draw(5);
+
+        // send up to services, add refresh buttons so other user can see
+        this.services.endTurn(this.game.gameid, this.game);
+
+        //after sending to services (to ensure that turn info was stored ), clear out turn
+        //refersh this.currentGame from service response
+        this.currentTurn = null;
+        this.refreshUI();
+    }
+
+    private draw(num: number): void {
         //draw new cards
-        let cardsToDraw = this.getUserData().drawPile.length < 5 ? this.getUserData().drawPile.length : 5;
+        let cardsToDraw = this.getUserData().drawPile.length < num ? this.getUserData().drawPile.length : num;
         for(let i = 0; i < cardsToDraw; ++i) {
             this.getUserData().hand.push(this.getUserData().drawPile.shift());
         }
         //do we need to shuffle
-        if(cardsToDraw < 5) {
-            const cardsStillNeeded = 5 - cardsToDraw;
+        if(cardsToDraw < num) {
+            const cardsStillNeeded = num - cardsToDraw;
             //move discard to draw
             this.getUserData().drawPile = this.getUserData().discardPile.splice(0, this.getUserData().discardPile.length);
             //shuffle the draw pile
@@ -161,14 +230,6 @@ export class GameController implements IView {
                 this.getUserData().hand.push(this.getUserData().drawPile.shift());
             }
         }
-
-        // send up to services, add refresh buttons so other user can see
-        this.services.endTurn(this.game.gameid, this.game);
-
-        //after sending to services (to ensure that turn info was stored ), clear out turn
-        //refersh this.currentGame from service response
-        this.currentTurn = null;
-        this.refreshUI();
     }
 
     private buyCard(cardElement:HTMLElement):void {
@@ -219,11 +280,40 @@ export class GameController implements IView {
         this.refreshUI();
     }
 
-    private playCard(cardElement:HTMLElement):void {
-        const userdata = this.game.user1 === this.services.currentUser ? this.game.user1_data : this.game.user2_data;
+    private trashCardFromHand(cardElement:HTMLElement):void {
+        const userdata = this.getUserData();
         for(let i = 0; i < userdata.hand.length; ++i) {
             const c = userdata.hand[i];
             if(c.id === cardElement.dataset.id) {
+                userdata.hand.splice(i, 1);
+                this.currentTurn.cardsTrashed.push(c);
+            }
+        }
+    }
+
+    private playCard(cardElement:HTMLElement):void {
+        const userdata = this.getUserData();
+        for(let i = 0; i < userdata.hand.length; ++i) {
+            const c = userdata.hand[i];
+            if(c.id === cardElement.dataset.id) {
+
+                //does this card have any actions?
+                if(c.extraActions && c.extraActions.length > 0) {
+                    for(let a of c.extraActions) {
+                        if(a.type == CardActionType.DRAW_CARD) {
+                            if(a.modifier == null) {
+                                this.draw(1);
+                            }
+                            else {
+                                this.draw(a.modifier);
+                            }
+                        }
+                        else if(a.type == CardActionType.TRASH_CARD) {
+                            this.trashing = true;
+                        }
+                    }
+                }
+
                 userdata.hand.splice(i, 1);
                 if(c.isBase) {
                     this.getUserData().basesInPlay.push(c);
@@ -284,7 +374,39 @@ export class GameController implements IView {
                 document.getElementById('gameLastCardModalBackground').classList.remove('hidden');
             }
         }
+        this.refreshChat();
         this.refreshUI();
+    }
+
+    refreshChat(): void {
+        if(!this.game || !this.game.chatHistory) {
+            return;
+        }
+        const chats = document.getElementById('gameChatBox');
+        //get the last item, and just add to the end
+        let lastTime = Number.MIN_SAFE_INTEGER;
+        if(chats.children.length > 0) {
+            const lastChat = chats.children[chats.children.length-1];
+            lastTime = parseInt((lastChat as HTMLElement).dataset.time);
+        }
+        let indexToStartAdding = 0;
+        //as soon as i hit something that is earlier (or equal) to the last chat i have, stop
+        for(let i = this.game.chatHistory.length-1; i >= 0; --i) {
+            if(this.game.chatHistory[i].createdate <= lastTime) {
+                indexToStartAdding = i+1;
+                break;
+            }
+        }
+        if(indexToStartAdding >= 0) {
+            for(let i = indexToStartAdding; i < this.game.chatHistory.length; ++i) {
+                const p = document.createElement('p');
+                p.innerHTML = this.game.chatHistory[i].user + ': ' + this.game.chatHistory[i].message;
+                p.classList.add('gameChatLine');
+                p.dataset.time = this.game.chatHistory[i].createdate.toString();
+                this.game.chatHistory[i].user == this.services.currentUser ? p.classList.add('gameChatLineMine') : p.classList.add('gameChatLineOther');
+                chats.appendChild(p);
+            }
+        }
     }
 
     startTurn(): void {

@@ -82,7 +82,8 @@ export class UserScreenController implements IView {
             user2: '',
             user1_data : null, //dont care about any data yet
             user2_data : null,
-            shared_data : null
+            shared_data : null,
+            chatHistory: []
         });
     }
 

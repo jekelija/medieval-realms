@@ -42,6 +42,13 @@
             
         </div>
         <div id='gameView' class='view hidden'>
+            <div id='gameShowCardsModalBackground' class='modalBackground view hidden'>
+                <div class='modal'>
+                    <div id='gameShowCards'>
+                        
+                    </div>
+                </div>
+            </div>
             <div id='gameLastCardModalBackground' class='modalBackground view hidden'>
                 <div class='modal'>
                     <p>Last Player Turn Summary</p>
@@ -91,11 +98,12 @@
                     </div>
                 </div>
                 <div id='gamePlayArea' class='gamePlayerArea'>
-                    <div style="flex: 0 0 200px;">
+                    <div id='gameChat'>
                         <p>Chat box</p>
                         <div id='gameChatBox'>
 
                         </div>
+                        <input id='gameChatText' type='text' />
                     </div>
                     <div id='gamePlayAreaCards'>
 

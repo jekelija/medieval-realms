@@ -1,6 +1,7 @@
 import { IServicesGameState } from "./IServicesGameState";
 import { IServicesPlayerState } from "./IServicesPlayerState";
 import { IServicesSharedState } from "./IServicesSharedState";
+import { IServicesChatInfo } from "./IServicesChatInfo";
 
 export interface IServicesGame {
     gameid:string;
@@ -10,4 +11,5 @@ export interface IServicesGame {
     user1_data: IServicesPlayerState;
     user2_data: IServicesPlayerState;
     shared_data: IServicesSharedState;
+    chatHistory: IServicesChatInfo[];
 }
