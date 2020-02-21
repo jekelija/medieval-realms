@@ -40,12 +40,18 @@ div#gameTradeRow {
     justify-content: space-evenly;
 }
 
+#gameShowBigCard .gameCard {
+    height: 420px;
+    width: 315px;
+}
+
 .gameCard {
     height: 140px;
     border: 1px solid black;
     padding: 10px;
     border-radius: 5px;
-    width: 105px
+    width: 105px;
+    position:relative;
 }
 .gameCard.gameCardBack {
     background: black;
@@ -83,9 +89,14 @@ button#gameHome {
     left: 10px;
     top: 10px;
 }
+.gameCard.gameCardClickable:hover {
+    top: -5px;
+}
 
 .gameCard.gameCardClickable {
     border: 2px solid blue;
+    top: 0px;
+    transition: all .3s ease;
 }
 
 .gameCardAttributeRow {
@@ -111,6 +122,7 @@ button#gameHome {
 
 .gameCardTargetReticle {
     width: 80px;
+    user-select: none;
 }
 
 #gameOtherDeck {
@@ -119,7 +131,6 @@ button#gameHome {
 }
 
 #gameOtherBases .gameCard {
-    position: relative;
     cursor: pointer;
 }
 
@@ -149,4 +160,22 @@ div#gameShowCards {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     grid-gap: 20px;
+}
+
+.baseRotate {
+    transform: rotate(-90deg);
+}
+
+.bigCardTrashArea {
+    position: absolute;
+    width: 45px;
+    height: 45px;
+    left: 30px;
+    bottom: 20px;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.bigCardTrashArea:hover {
+    background: rgba(255,10,20,.5);
 }

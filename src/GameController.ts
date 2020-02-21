@@ -5,7 +5,7 @@ import * as log from 'loglevel';
 import { ViewManager, VIEW, IView } from "./ViewManager";
 import { Services } from "./Services";
 import { IServicesGame } from "./serviceModel/IServicesGame";
-import { IServicesCard, CardActionType } from './serviceModel/IServicesCard';
+import { IServicesCard, CardActionType, Faction } from './serviceModel/IServicesCard';
 import { emptyDiv, findAncestor } from './Utilts';
 import { IServicesGameState } from './serviceModel/IServicesGameState';
 import { TurnInfo } from './model/turninfo';
@@ -14,11 +14,21 @@ import { IServicesPlayerState } from './serviceModel/IServicesPlayerState';
 
 import { ImageExport } from './ImageExport';
 
+const cache = {};
+
+function importAll (r) {
+  r.keys().forEach(key => cache[key] = r(key));
+}
+  
+importAll(require.context('../assets/cards', true));
+
 export class GameController implements IView {
     private game:IServicesGame;
     private currentTurn:TurnInfo = null;
     private refreshing = false;
     private trashing = false;
+
+    private bigCardModalTimeout:NodeJS.Timeout = null;
 
     constructor(private viewManager:ViewManager, private services: Services) {
         document.getElementById('gameHome').addEventListener('click', e=> {
@@ -61,15 +71,9 @@ export class GameController implements IView {
             }
         });
 
-        document.getElementById('gameOtherDeck').addEventListener('click', e=> {
+        document.getElementById('gameAttack').addEventListener('click', e=> {
             if(this.isMyTurn()) {
-                if(this.hasTargetReticleOnCard(e.currentTarget as HTMLDivElement)) {
-                    this.removeTargetReticle(e.currentTarget as HTMLDivElement);
-                    this.attack();
-                }
-                else if(this.canAttack() && this.currentTurn.attack > 0) {
-                    this.addTargetReticleToCard(e.currentTarget as HTMLDivElement);
-                }
+                this.attack();
             }
             
         });
@@ -84,7 +88,7 @@ export class GameController implements IView {
                 else {
                     for(let i = 0; i < this.getOtherUserData().basesInPlay.length; ++i) {
                         const c = this.getOtherUserData().basesInPlay[i];
-                        if(c.id === cardElement.dataset.id) {
+                        if(c.uuid === cardElement.dataset.uuid) {
                             //if im an outpost, can always attack, otherwise must be attackable
                             if(this.currentTurn.attack >= c.baseDefense && (c.isOutpost || this.canAttack())) {
                                 this.addTargetReticleToCard(cardElement as HTMLDivElement);
@@ -97,22 +101,32 @@ export class GameController implements IView {
             
         });
 
+
+        document.getElementById('gamePlayAreaCards').addEventListener('click', e=> {
+            const cardElement = findAncestor(e.target as HTMLElement, 'gameCard') as HTMLDivElement;
+            if(cardElement) {
+                const card = this.findCard(cardElement, this.currentTurn.cardsPlayed);
+                this.showBigCardModal(cardElement, card, this.isMyTurn());
+            }
+        });
+
         document.getElementById('gameMyHand').addEventListener('click', e=> {
             if(this.isMyTurn()) {
-                const cardElement = findAncestor(e.target as HTMLElement, 'gameCard');
+                const cardElement = findAncestor(e.target as HTMLElement, 'gameCard') as HTMLDivElement;
                 if(cardElement) {
                     if(this.trashing) {
-                        if(this.hasTargetReticleOnCard(cardElement as HTMLDivElement)) {
-                            this.removeTargetReticle(cardElement as HTMLDivElement);
-                            this.trashCardFromHand(cardElement as HTMLDivElement);
+                        if(this.hasTargetReticleOnCard(cardElement)) {
+                            this.removeTargetReticle(cardElement);
+                            this.trashCardFromHand(cardElement);
                             this.trashing = false;
                         }
                         else {
-                            this.addTargetReticleToCard(cardElement as HTMLDivElement);
+                            this.addTargetReticleToCard(cardElement);
                         }
                     }
                     else {
-                        this.playCard(cardElement);
+                        const card = this.findCard(cardElement, this.getUserData().hand);
+                        this.bigCardOnFirstClick(cardElement, card, this.playCard.bind(this));
                     }
                 }
             }
@@ -129,12 +143,48 @@ export class GameController implements IView {
         });
         document.getElementById('gameTradeRow').addEventListener('click', e=> {
             if(this.isMyTurn()) {
-                const card = findAncestor(e.target as HTMLElement, 'gameCard');
-                if(card && card.classList.contains('gameCardClickable')) {
-                    this.buyCard(card);
+                const cardElement = findAncestor(e.target as HTMLElement, 'gameCard') as HTMLDivElement;
+                if(cardElement) {
+                    const card = this.findCard(cardElement, this.game.shared_data.tradeRow);
+                    if(cardElement.classList.contains('gameCardClickable')) {
+                        this.bigCardOnFirstClick(cardElement, card, this.buyCard.bind(this));
+                    }
+                    else {
+                        this.showBigCardModal(cardElement, card);
+                    }
                 }
             }
         });
+        document.getElementById('gameHalflings').addEventListener('click', e=> {
+            if(this.isMyTurn()) {
+                const cardElement = findAncestor(e.target as HTMLElement, 'gameCard') as HTMLDivElement;
+                if(cardElement) {
+                    if(cardElement.classList.contains('gameCardClickable')) {
+                        this.bigCardOnFirstClick(cardElement, this.game.shared_data.halflings[0], this.buyCard.bind(this));
+                    }
+                    else {
+                        this.showBigCardModal(cardElement, this.game.shared_data.halflings[0]);
+                    }
+                }
+            }
+        });
+    }
+
+    private bigCardOnFirstClick(cardElement:HTMLDivElement, card:IServicesCard, callback:(cardElement)=>void, enableClickableAreas?:boolean): void {
+        if(this.hasTargetReticleOnCard(cardElement)) {
+            clearTimeout(this.bigCardModalTimeout);
+            this.removeTargetReticle(cardElement);
+            callback(cardElement);
+        }
+        else {
+            this.addTargetReticleToCard(cardElement);
+            if(this.bigCardModalTimeout) {
+                clearTimeout(this.bigCardModalTimeout);
+            }
+            this.bigCardModalTimeout = setTimeout(()=> {
+                this.showBigCardModal(cardElement, card, enableClickableAreas);
+            }, 800);
+        }
     }
 
     private canAttack(): boolean {
@@ -158,6 +208,31 @@ export class GameController implements IView {
         }
 
         document.getElementById('gameShowCardsModalBackground').classList.remove('hidden');
+    }
+    private showBigCardModal(cardElement: HTMLDivElement, card:IServicesCard, enableClickableAreas?:boolean): void {
+        const div = document.getElementById('gameShowBigCard');
+        emptyDiv(div);
+        const cloneCard = cardElement.cloneNode(true) as HTMLDivElement;
+        //remove target reticle
+        this.removeTargetReticle(cloneCard);
+        cloneCard.classList.remove('gameCardClickable');
+        div.appendChild(cloneCard);
+
+        if(cloneCard.dataset.isBase) {
+            document.getElementById('gameShowBigCardModalBackground').getElementsByClassName('modal')[0].classList.add('baseRotate');
+        }
+        else {
+            document.getElementById('gameShowBigCardModalBackground').getElementsByClassName('modal')[0].classList.remove('baseRotate');
+        }
+
+        if(enableClickableAreas) {
+            
+            const trashArea = document.createElement('div');
+            trashArea.classList.add('bigCardTrashArea');
+            cloneCard.appendChild(trashArea);
+        }
+
+        document.getElementById('gameShowBigCardModalBackground').classList.remove('hidden');
     }
 
     private async refreshGame(): Promise<void> {
@@ -232,17 +307,34 @@ export class GameController implements IView {
         }
     }
 
+    private findCard(cardElement:HTMLElement, cards:IServicesCard[]):IServicesCard {
+        for(let i = 0; i < cards.length; ++i) {
+            const c = cards[i];
+            if(c.uuid === cardElement.dataset.uuid) {
+                return c;
+            }
+        }
+        return null;
+    }
+ 
     private buyCard(cardElement:HTMLElement):void {
-        for(let i = 0; i < this.game.shared_data.tradeRow.length; ++i) {
-            const c = this.game.shared_data.tradeRow[i];
-            if(c.id === cardElement.dataset.id) {
-                //take card off top of draw pile and put in trade row
-                this.game.shared_data.tradeRow.splice(i, 1);
-                // check for no cards left
-                if(this.game.shared_data.drawPile.length > 0) {
-                    const newCard = this.game.shared_data.drawPile.shift();
-                    this.game.shared_data.tradeRow.push(newCard);
+        const buyableCards = this.game.shared_data.halflings.length > 0 ? this.game.shared_data.tradeRow.concat(this.game.shared_data.halflings[0]) : this.game.shared_data.tradeRow;
+        for(let i = 0; i < buyableCards.length; ++i) {
+            const c = buyableCards[i];
+            if(c.uuid === cardElement.dataset.uuid) {
+                if(this.game.shared_data.halflings[0] == c) {
+                    this.game.shared_data.halflings.shift();
                 }
+                else {
+                    //take card off top of draw pile and put in trade row
+                    this.game.shared_data.tradeRow.splice(i, 1);
+                    // check for no cards left
+                    if(this.game.shared_data.drawPile.length > 0) {
+                        const newCard = this.game.shared_data.drawPile.shift();
+                        this.game.shared_data.tradeRow.push(newCard);
+                    }
+                }
+                
                 //add to discard pile
                 const userData = this.getUserData();
                 userData.discardPile.push(c);
@@ -261,7 +353,7 @@ export class GameController implements IView {
     private attackBase(cardElement:HTMLDivElement): void {
         for(let i = 0; i < this.getOtherUserData().basesInPlay.length; ++i) {
             const c = this.getOtherUserData().basesInPlay[i];
-            if(c.id === cardElement.dataset.id) {
+            if(c.uuid === cardElement.dataset.uuid) {
                 this.getOtherUserData().basesInPlay.splice(i, 1);
                 this.getOtherUserData().discardPile.push(c);
                 this.currentTurn.totalAttack += c.baseDefense;
@@ -284,7 +376,7 @@ export class GameController implements IView {
         const userdata = this.getUserData();
         for(let i = 0; i < userdata.hand.length; ++i) {
             const c = userdata.hand[i];
-            if(c.id === cardElement.dataset.id) {
+            if(c.uuid === cardElement.dataset.uuid) {
                 userdata.hand.splice(i, 1);
                 this.currentTurn.cardsTrashed.push(c);
             }
@@ -295,7 +387,7 @@ export class GameController implements IView {
         const userdata = this.getUserData();
         for(let i = 0; i < userdata.hand.length; ++i) {
             const c = userdata.hand[i];
-            if(c.id === cardElement.dataset.id) {
+            if(c.uuid === cardElement.dataset.uuid) {
 
                 //does this card have any actions?
                 if(c.extraActions && c.extraActions.length > 0) {
@@ -489,6 +581,7 @@ export class GameController implements IView {
         }
         for(let i = 0; i < otherData.basesInPlay.length; ++i) {
             const cardElement = this.createFaceUpCard(otherData.basesInPlay[i]);
+            cardElement.classList.add('baseRotate');
             document.getElementById('gameOtherBases').appendChild(cardElement);
         }
 
@@ -512,7 +605,16 @@ export class GameController implements IView {
 
         //draw shared space
         if(this.game.shared_data.halflings.length > 0) {
-            document.getElementById('gameHalflings').appendChild(this.createFaceUpCard(this.game.shared_data.halflings[0]));
+            const cardElement = this.createFaceUpCard(this.game.shared_data.halflings[0]);
+            document.getElementById('gameHalflings').appendChild(cardElement);
+            if(myTurn) {
+                if(this.currentTurn.trade >= this.game.shared_data.halflings[0].cost) {
+                    cardElement.classList.add('gameCardClickable');
+                }
+                else {
+                    cardElement.classList.remove('gameCardClickable');
+                }
+            }
         }
         const gameDrawPile = this.drawDeck(this.game.shared_data.drawPile);
         if(gameDrawPile) {
@@ -536,7 +638,7 @@ export class GameController implements IView {
 
             //go through the trade deck, highlight whats available
             for(let c of this.game.shared_data.tradeRow) {
-                const cardElement = document.getElementById('gameTradeRow').querySelector('[data-id="' + c.id + '"]');
+                const cardElement = document.getElementById('gameTradeRow').querySelector('[data-uuid="' + c.uuid + '"]');
                 if(c.cost <= this.currentTurn.trade) {
                     cardElement.classList.add('gameCardClickable');
                 }
@@ -545,6 +647,11 @@ export class GameController implements IView {
                 }
             }
         }  
+        else {
+            document.getElementById('gamePlayTrade').innerHTML = "0";
+            document.getElementById('gamePlayAttack').innerHTML = "0";
+            document.getElementById('gamePlayAuthority').innerHTML = "0";
+        }
 
         //draw my space
         const myData = this.getUserData();
@@ -557,6 +664,7 @@ export class GameController implements IView {
         }
         for(let i = 0; i < myData.basesInPlay.length; ++i) {
             const cardElement = this.createFaceUpCard(myData.basesInPlay[i]);
+            cardElement.classList.add('baseRotate');
             document.getElementById('gameMyBases').appendChild(cardElement);
         }
         
@@ -598,43 +706,49 @@ export class GameController implements IView {
         return null;
     }
 
+    private getCardImageFile(card:IServicesCard):string {
+        let prefix = './Unaligned/';
+        if(card.faction == Faction.Dwarves) {
+            prefix = './Dwarves/';
+        }
+        else if(card.faction == Faction.Elves) {
+            prefix = './Elves/';
+        }
+        else if(card.faction == Faction.Orcs) {
+            prefix = './Orcs/';
+        }
+        else if(card.faction == Faction.Knights) {
+            prefix = './Knights/';
+        }
+
+        const cachedImage = cache[prefix+card.imageFilename];
+        if(cachedImage) {
+            return cachedImage.default;
+        }
+        return '';
+    }
+
     private createFaceUpCard(card: IServicesCard):HTMLDivElement {
         const div = document.createElement('div');
         div.classList.add('gameCard');
-        div.dataset.id = card.id;
-
-        const c = document.createElement('p');
-        c.innerHTML = 'C: ' + card.cost;
-        div.appendChild(c);
-        const cardAttributes = document.createElement('div');
-        cardAttributes.classList.add('gameCardAttributeRow');
-
-        if(card.trade > 0) {
-            const t = document.createElement('p');
-            t.innerHTML = 'T: ' + card.trade;
-            cardAttributes.appendChild(t);
-        }
-        if(card.attack > 0) {
-            const a = document.createElement('p');
-            a.innerHTML = 'A: ' + card.attack;
-            cardAttributes.appendChild(a);
-        }
-        if(card.authority > 0) {
-            const h = document.createElement('p');
-            h.innerHTML = 'H: ' + card.authority;
-            cardAttributes.appendChild(h);
-        }
-        div.appendChild(cardAttributes);
+        div.dataset.uuid = card.uuid;
         if(card.isBase) {
-            const b = document.createElement('p');
-            if(card.isOutpost) {
-                b.innerHTML = 'Outpost ' + card.baseDefense;
-            }
-            else {
-                b.innerHTML = 'Base ' + card.baseDefense;
-            }
-            div.appendChild(b);
+            div.dataset.isBase = "true";
         }
+        div.style.backgroundImage = 'url(' + this.getCardImageFile(card) + ')';
+        div.style.backgroundPosition = 'center'; 
+        div.style.backgroundRepeat = 'no-repeat'; 
+        div.style.backgroundSize = 'cover'; 
+
+        //need face down card first
+        // const img = document.createElement('img');
+        // img.src = this.getCardImageFile(card);
+        // img.classList.add('gameCardImage');
+        // if(card.isBase) {
+        //     img.classList.add('gameCardBaseImage');
+        // }
+        // div.appendChild(img);
+
         return div;
     }
 
@@ -659,6 +773,13 @@ export class GameController implements IView {
     }
 
     private addTargetReticleToCard(card: HTMLDivElement): void {
+        //remove all other target reticles
+        const reticle = document.getElementsByClassName('gameCardTargetReticleContainer');
+        while(reticle.length > 0) {
+            reticle[0].remove();
+        }
+
+
         const div = document.createElement('div');
         div.classList.add('gameCardTargetReticleContainer');
 
